@@ -1,6 +1,8 @@
 import { HiArrowRight } from "react-icons/hi";
+import { useNavigate } from "react-router-dom";
 
 export default function MessagesTable() {
+    const navigate = useNavigate();
     return (
         <div className="w-full bg-white border border-[#E5E7EB] rounded-2xl shadow-sm">
            
