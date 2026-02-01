@@ -15,6 +15,7 @@ import CreateBlogPost from "./pages/CreateBlogPost";
 import EditBlog from "./pages/EditBlog";
 import EditProperty from "./pages/EditProperty";
 // ..
+// ..
 const App = () => {
   return (
     <Router>
