@@ -1,11 +1,6 @@
-import {
-    Mail,
-    MapPin,
-    Phone,
-    Globe,
-} from "lucide-react";
+
 import { FiGlobe } from "react-icons/fi";
-import { assets } from "../../../../upsurge/upsurge/src/assets/assets";
+
 
 export default function AgentCard({ agent }) {
     return (
@@ -40,7 +35,7 @@ export default function AgentCard({ agent }) {
                     <p className="flex items-center gap-3">
                         <span className="w-8 h-8 flex items-center justify-center rounded-full bg-[#F9FAFB] border border-[#E5E7EB]">
                             <img
-                                src={assets.email_icon}
+                                src="/email.svg"
                                 alt="Email"
                                 className="w-4 h-4 filter font-bold text-[#4B5563] brightness-0 "
                             />
@@ -51,7 +46,7 @@ export default function AgentCard({ agent }) {
                     <p className="flex items-center gap-3">
                         <span className="w-8 h-8 flex items-center justify-center rounded-full bg-[#F9FAFB] border border-[#E5E7EB]">
                             <img
-                                src={assets.location_icon}
+                                src="/location.svg"
                                 alt="Office"
                                 className="w-4 h-4 filter font-bold text-[#4B5563] brightness-0 "
                             />
@@ -62,7 +57,7 @@ export default function AgentCard({ agent }) {
                     <p className="flex items-center gap-3">
                         <span className="w-8 h-8 flex items-center justify-center rounded-full bg-[#F9FAFB] border border-[#E5E7EB]">
                             <img
-                                src={assets.phone_icon}
+                                src="/call.svg"
                                 alt="Phone"
                                 className="w-4 h-4 filter font-bold text-[#4B5563] brightness-0 "
                             />
