@@ -47,13 +47,14 @@ export default function Sidebar({ isOpen, onClose }) {
         `}
             >
 
-                <div className="flex items-center justify-between px-6 py-4 border-b border-[#E5E7EB]">
+                <div className="flex items-center justify-between px-6  border-b border-[#E5E7EB]">
                     <div className="flex items-center gap-2">
-                        <img src="/logo.svg" alt="Logo" className="w-7 h-7" />
-                        <h1 className="text-lg font-bold text-[#5856D6]">
-                            EstateAdmin
+                        <img src="/logo.png" alt="Logo" className="w-15 h-15" />
+                        <h1 className="text-sm font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#76411E] to-[#FAB28D]">
+                            UPSURGE REALTY
                         </h1>
                     </div>
+
 
                     <button onClick={onClose} className="md:hidden text-gray-600">
                         <X size={20} />
