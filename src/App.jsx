@@ -14,6 +14,8 @@ import MessageDetail from "./pages/MessageDetail";
 import CreateBlogPost from "./pages/CreateBlogPost";
 import EditBlog from "./pages/EditBlog";
 import EditProperty from "./pages/EditProperty";
+import Agents from "./pages/Agents";
+import AddAgent from "./pages/AddAgent";
 // ..
 // ..
 const App = () => {
@@ -59,7 +61,22 @@ const App = () => {
             </ProtectedRoute>
           }
         />
-
+        <Route
+          path="/agents"
+          element={
+            <ProtectedRoute>
+              <Agents />
+            </ProtectedRoute>
+          }
+        />
+          <Route
+          path="/add-agent"
+          element={
+            <ProtectedRoute>
+              <AddAgent />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/about"
           element={
@@ -109,7 +126,7 @@ const App = () => {
             </ProtectedRoute>
           }
         />
-         <Route
+        <Route
           path="/edit-property/:id"
           element={
             <ProtectedRoute>

@@ -19,7 +19,7 @@ export default function DashboardLayout({ children }) {
         <Topbar onMenuClick={() => setSidebarOpen(true)} />
 
         {/* Page Content */}
-        <main className="flex-1 overflow-y-auto overflow-x-auto bg-gray-50 p-3 sm:p-6">
+        <main className="flex-1 overflow-y-auto overflow-x-autobg-gray-50 p-3 sm:p-6">
           {children}
         </main>
       </div>
