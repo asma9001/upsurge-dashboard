@@ -1,41 +1,51 @@
 import { ArrowLeft, Upload } from "lucide-react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import DashboardLayout from "../layouts/DashboardLayout";
-
-// Sample blog data (replace with API)
-const blogs = [
-  {
-    id: 1,
-    title: "Guide to First-Time Home Buying",
-    content: "This is blog content...",
-    date: "2023-10-10",
-    status: "Published",
-    image: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=300",
-  },
-  {
-    id: 2,
-    title: "Investment Opportunities in Commercial Real Estate",
-    content: "Investment blog content...",
-    date: "2023-10-20",
-    status: "Draft",
-    image: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=300",
-  },
-];
+import { supabase } from "../config/supabaseClient";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 export default function EditBlog() {
   const { id } = useParams();
   const { state } = useLocation();
   const navigate = useNavigate();
 
-  // Get blog from state or fallback
-  const blog = state?.blog || blogs.find((b) => b.id === Number(id));
+  const [blog, setBlog] = useState(state?.blog || null);
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
+  const [status, setStatus] = useState("Draft");
+  const [imageFile, setImageFile] = useState(null);
+  const [preview, setPreview] = useState(null);
+  const [loading, setLoading] = useState(false);
 
-  const [title, setTitle] = useState(blog?.title || "");
-  const [content, setContent] = useState(blog?.content || "");
-  const [status, setStatus] = useState(blog?.status || "Draft");
-  const [image, setImage] = useState(blog?.image || null);
-  const [preview, setPreview] = useState(blog?.image || null);
+  // Fetch blog if not passed via state
+  useEffect(() => {
+    if (blog) {
+      setTitle(blog.title);
+      setContent(blog.content);
+      setStatus(blog.status);
+      setPreview(blog.cover_image || null);
+    } else {
+      const fetchBlog = async () => {
+        const { data, error } = await supabase
+          .from("blogs")
+          .select("*")
+          .eq("id", id)
+          .single();
+        if (error) {
+          toast.error("Failed to fetch blog: " + error.message);
+        } else {
+          setBlog(data);
+          setTitle(data.title);
+          setContent(data.content);
+          setStatus(data.status);
+          setPreview(data.cover_image || null);
+        }
+      };
+      fetchBlog();
+    }
+  }, [id, blog]);
 
   if (!blog) {
     return (
@@ -45,49 +55,64 @@ export default function EditBlog() {
     );
   }
 
-  // Image upload handler
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    setImage(file);
+    setImageFile(file);
     setPreview(URL.createObjectURL(file));
   };
 
-  // Update handler
-  const handleUpdate = () => {
-    const updatedBlog = {
-      id: blog.id,
-      title,
-      content,
-      status,
-      image,
-    };
-    console.log("UPDATED BLOG:", updatedBlog);
-    alert("Blog updated successfully!");
-    navigate("/blogs");
+  const handleUpdate = async () => {
+    setLoading(true);
+
+    let imageUrl = blog.cover_image;
+
+    // Upload new image if selected
+    if (imageFile) {
+      const fileName = `${Date.now()}_${imageFile.name}`;
+      const { error: uploadError } = await supabase.storage
+        .from("blog-images")
+        .upload(fileName, imageFile);
+
+      if (uploadError) {
+        toast.error("Image upload failed: " + uploadError.message);
+        setLoading(false);
+        return;
+      }
+
+      const { publicURL } = supabase.storage.from("blog-images").getPublicUrl(fileName);
+      imageUrl = publicURL;
+    }
+
+    // Update blog in Supabase
+    const { error } = await supabase
+      .from("blogs")
+      .update({ title, content, status, cover_image: imageUrl })
+      .eq("id", id);
+
+    if (error) {
+      toast.error("Update failed: " + error.message);
+    } else {
+      toast.success("Blog updated successfully!");
+      setTimeout(() => navigate("/blogs"), 1500); // Navigate after toast
+    }
+
+    setLoading(false);
   };
 
   return (
     <DashboardLayout>
       <div className="min-h-screen px-4 py-6">
         <div className="max-w-3xl mx-auto space-y-6">
-
-          
           <div className="flex items-center gap-2">
-            <ArrowLeft
-              onClick={() => navigate(-1)}
-              className="w-5 h-5 text-gray-600 cursor-pointer"
-            />
+            <ArrowLeft onClick={() => navigate(-1)} className="w-5 h-5 text-gray-600 cursor-pointer" />
             <h1 className="text-xl font-bold text-gray-900">Edit Blog Post</h1>
           </div>
 
-     
           <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6 space-y-4">
-            
+            {/* Title */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Title
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
               <input
                 type="text"
                 value={title}
@@ -96,11 +121,9 @@ export default function EditBlog() {
               />
             </div>
 
-        
+            {/* Status */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Status
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
@@ -112,31 +135,11 @@ export default function EditBlog() {
               </select>
             </div>
 
-        
+            {/* Cover Image */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Date
-              </label>
-              <input
-                type="date"
-                value={blog.date}
-                readOnly
-                className="w-full px-4 py-2 rounded-lg border border-gray-200 bg-gray-100 cursor-not-allowed"
-              />
-            </div>
-
-        
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Cover Image
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Cover Image</label>
               <label className="border-2 border-dashed border-gray-300 rounded-lg h-40 flex items-center justify-center cursor-pointer relative overflow-hidden hover:bg-gray-50">
-                {preview && (
-                  <img
-                    src={preview}
-                    className="absolute inset-0 w-full h-full object-cover"
-                  />
-                )}
+                {preview && <img src={preview} className="absolute inset-0 w-full h-full object-cover" />}
                 {!preview && (
                   <div className="flex flex-col items-center text-gray-400">
                     <Upload className="w-5 h-5 mb-1" />
@@ -147,11 +150,9 @@ export default function EditBlog() {
               </label>
             </div>
 
-          
+            {/* Content */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Content
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Content</label>
               <textarea
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
@@ -160,17 +161,21 @@ export default function EditBlog() {
               />
             </div>
 
-         
+            {/* Update Button */}
             <div className="flex justify-end">
               <button
                 onClick={handleUpdate}
-                className="bg-indigo-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-indigo-700 transition"
+                disabled={loading}
+                className="bg-indigo-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-indigo-700 transition disabled:opacity-50"
               >
-                Update Blog
+                {loading ? "Updating..." : "Update Blog"}
               </button>
             </div>
           </div>
         </div>
+
+        {/* Toast Container */}
+        <ToastContainer position="top-right" autoClose={2000} />
       </div>
     </DashboardLayout>
   );

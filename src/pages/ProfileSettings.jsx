@@ -1,24 +1,145 @@
 import { Upload, Lock, Save } from "lucide-react";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import DashboardLayout from "../layouts/DashboardLayout";
+import { supabase } from "../config/supabaseClient";
+import { toast } from "react-toastify";
 
 export default function ProfileSettings() {
-  const [profileImage, setProfileImage] = useState(
-    "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&w=256&q=80"
-  );
-  const [name, setName] = useState("Queen helen");
-  const [email, setEmail] = useState("Helen@gmail.com");
-  const [password, setPassword] = useState("********");
-  const [newPassword, setNewPassword] = useState("********");
-  const [confirmNewPassword, setConfirmNewPassword] = useState("********");
+  const [profileImage, setProfileImage] = useState("");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
+
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [user, setUser] = useState(null);
 
   const fileInputRef = useRef(null);
 
+ useEffect(() => {
+  const fetchProfile = async () => {
+    const { data: userData } = await supabase.auth.getUser();
+    const currentUser = userData?.user;
+
+    if (!currentUser) return;
+
+    setUser(currentUser);
+    setEmail(currentUser.email);
+
+    // Fetch profile
+    let { data, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", currentUser.id)
+      .single();
+
+    // If profile does not exist → create it
+    if (!data) {
+      const { error: insertError } = await supabase
+        .from("profiles")
+        .insert({
+          id: currentUser.id,
+          name: currentUser.email,
+        });
+
+      if (!insertError) {
+        setName(currentUser.email);
+      }
+    } else {
+      setName(data.name || "");
+      setProfileImage(data.avatar_url || "");
+    }
+  };
+
+  fetchProfile();
+}, []);
+
+
+  // ✅ Handle Image Preview
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    const url = URL.createObjectURL(file);
-    setProfileImage(url);
+    setProfileImage(URL.createObjectURL(file));
+  };
+
+  // ✅ Save Profile
+  const handleSave = async () => {
+    if (!user) return;
+
+    try {
+      let avatar_url = profileImage;
+
+      // Upload new image if selected
+      if (fileInputRef.current?.files[0]) {
+        const file = fileInputRef.current.files[0];
+        const fileExt = file.name.split(".").pop();
+        const fileName = `${user.id}.${fileExt}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("profile-images")
+          .upload(fileName, file, { upsert: true });
+
+        if (uploadError) throw uploadError;
+
+        avatar_url =
+          supabase.storage
+            .from("profile-images")
+            .getPublicUrl(fileName).data.publicUrl;
+      }
+
+      // Update profiles table
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          name,
+          avatar_url,
+        })
+        .eq("id", user.id);
+
+      if (error) throw error;
+
+      /// Update password if entered
+      if (newPassword) {
+        if (!currentPassword) {
+          toast.error("Please enter current password ❌");
+          return;
+        }
+
+        if (newPassword !== confirmNewPassword) {
+          toast.error("Passwords do not match ❌");
+          return;
+        }
+
+        if (currentPassword === newPassword) {
+          toast.error("New password should be different from old password ❌");
+          return;
+        }
+
+        // Re-authenticate user
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: user.email,
+          password: currentPassword,
+        });
+
+        if (signInError) {
+          toast.error("Current password is incorrect ❌");
+          return;
+        }
+
+        // Update password
+        const { error: passError } = await supabase.auth.updateUser({
+          password: newPassword,
+        });
+
+        if (passError) throw passError;
+      }
+
+
+
+      toast.success("Profile updated successfully 🎉");
+    } catch (error) {
+      toast.error(error.message || "Something went wrong ❌");
+    }
   };
 
   return (
@@ -54,7 +175,6 @@ export default function ProfileSettings() {
               className="rounded-full w-24 h-24 sm:w-28 sm:h-28 object-cover"
             />
             <p className="text-[#374151] font-medium text-sm">Change Photo</p>
-
             <input
               type="file"
               accept="image/*"
@@ -111,15 +231,16 @@ export default function ProfileSettings() {
           <div className="grid grid-cols-1 gap-4 sm:gap-6">
             <div>
               <label className="block text-sm font-medium text-[#374151] mb-1">
-                Password
+                Current Password
               </label>
               <input
                 type="password"
-                value={password}
-                readOnly
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
                 className="w-full sm:w-1/2 bg-[#F2F2F2] rounded-lg py-2 px-3 text-[#374151] outline-none"
               />
             </div>
+
 
             <div>
               <label className="block text-sm font-medium text-[#374151] mb-1">
@@ -149,7 +270,7 @@ export default function ProfileSettings() {
 
         {/* Save Button */}
         <div className="flex justify-end">
-          <button className="flex items-center gap-2 bg-[#5856D6] shadow-md text-white px-4 sm:px-5 py-2 rounded-lg text-sm font-medium">
+          <button onClick={handleSave} className="flex items-center gap-2 bg-[#5856D6] shadow-md text-white px-4 sm:px-5 py-2 rounded-lg text-sm font-medium">
             <Save size={16} />
             Save Changes
           </button>

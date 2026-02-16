@@ -9,7 +9,7 @@ export default function AgentCard({ agent }) {
 
             <div className="relative">
                 <img
-                    src={agent.image}
+                    src={agent.image || "/agent1.png"}
                     alt={agent.name}
                     className="w-full h-56 object-cover"
                 />
@@ -22,14 +22,14 @@ export default function AgentCard({ agent }) {
 
             <div className="p-4 flex flex-col gap-3 flex-1">
                 <h3 className="font-semibold text-lg  text-[#0F172A]">
-                    {agent.name}
+                    {agent.full_name}
                 </h3>
 
                 <span className="text-[#2563EB] text-sm font-medium mt-0">
                     {agent.role}
                 </span>
 
-                <span className="text-xs text-[#9CA3AF]">{agent.license}</span>
+                <span className="text-xs text-[#9CA3AF]">{agent.license || "Lic: NC-123456"}</span>
 
                 <div className="space-y-3 text-sm text-[#4B5563]">
                     <p className="flex items-center gap-3">
@@ -51,7 +51,7 @@ export default function AgentCard({ agent }) {
                                 className="w-4 h-4 filter font-bold text-[#4B5563] brightness-0 "
                             />
                         </span>
-                        Office: {agent.office}
+                        Office: {agent.location}
                     </p>
 
                     <p className="flex items-center gap-3">
@@ -62,7 +62,7 @@ export default function AgentCard({ agent }) {
                                 className="w-4 h-4 filter font-bold text-[#4B5563] brightness-0 "
                             />
                         </span>
-                        Cell: {agent.cell}
+                        Cell: {agent.phone}
                     </p>
 
                     <p className="flex items-center gap-3">

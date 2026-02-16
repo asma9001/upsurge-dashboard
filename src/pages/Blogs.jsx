@@ -1,65 +1,56 @@
 import { Pencil, Trash2, Plus } from "lucide-react";
 import DashboardLayout from "../layouts/DashboardLayout";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-
-const initialBlogs = [
-  {
-    id: 1,
-    title: "Guide to First-Time Home Buying",
-    type: "By Admin",
-    location: "Miami, FL",
-    status: "Published",
-    statusStyle: "bg-[#DCFCE7] text-[#166534]",
-    date: "10/10/2023",
-    image: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=100",
-  },
-  {
-    id: 2,
-    title: "Investment Opportunities in Commercial Real Estate",
-    type: "By Admin",
-    location: "Aspen, CO",
-    status: "Draft",
-    statusStyle: "bg-[#FEF9C3] text-[#854D0E]",
-    date: "20/10/2023",
-    image: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=100",
-  },
-];
+import { supabase } from "../config/supabaseClient";
 
 export default function Blogs() {
-  const [blogs, setBlogs] = useState(initialBlogs);
+  const [blogs, setBlogs] = useState([]);
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const navigate = useNavigate();
 
   const ITEMS_PER_PAGE = 5;
 
+  // Fetch blogs from Supabase
+  useEffect(() => {
+    const fetchBlogs = async () => {
+      const { data, error } = await supabase
+        .from("blogs")
+        .select("*")
+        .order("id", { ascending: false }); // newest first
+
+      if (error) {
+        console.error("Error fetching blogs:", error.message);
+      } else {
+        setBlogs(data);
+      }
+    };
+
+    fetchBlogs();
+  }, []);
+
+  // Filtered and paginated blogs
   const filteredBlogs = blogs.filter((item) =>
-    `${item.title} ${item.type} ${item.location}`
-      .toLowerCase()
-      .includes(search.toLowerCase())
+    `${item.title} ${item.author || ""}`.toLowerCase().includes(search.toLowerCase())
   );
 
-  const totalPages = Math.ceil(filteredBlogs.length / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(filteredBlogs.length / ITEMS_PER_PAGE) || 1;
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const paginatedBlogs = filteredBlogs.slice(
-    startIndex,
-    startIndex + ITEMS_PER_PAGE
-  );
+  const paginatedBlogs = filteredBlogs.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
- 
-  const handleDelete = (id) => {
-    const confirmDelete = window.confirm(
-      "Are you sure you want to delete this blog post?"
-    );
+  // Delete blog
+  const handleDelete = async (id) => {
+    const confirmDelete = window.confirm("Are you sure you want to delete this blog post?");
     if (!confirmDelete) return;
 
-    setBlogs((prev) => prev.filter((blog) => blog.id !== id));
-  };
+    const { error } = await supabase.from("blogs").delete().eq("id", id);
 
-
-  const handleEdit = (blog) => {
-    navigate("/edit-blog", { state: { blog } });
+    if (error) {
+      alert(error.message);
+    } else {
+      setBlogs((prev) => prev.filter((blog) => blog.id !== id));
+    }
   };
 
   return (
@@ -101,84 +92,92 @@ export default function Blogs() {
             </thead>
 
             <tbody>
-              {paginatedBlogs.map((item) => (
-                <tr
-                  key={item.id}
-                  className="border-b border-[#E5E7EB] last:border-b-0"
-                >
-                  {/* Post */}
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-4">
-                      <img
-                        src={item.image}
-                        alt={item.title}
-                        className="w-12 h-12 rounded-lg object-cover"
-                      />
-                      <div>
-                        <p className="font-semibold text-gray-900">
-                          {item.title}
-                        </p>
-                        <p className="text-xs text-gray-500">{item.type}</p>
-                      </div>
-                    </div>
-                  </td>
-
-                  {/* Date */}
-                  <td className="px-6 py-4 text-gray-700">
-                    {item.date}
-                  </td>
-
-                  {/* Status */}
-                  <td className="px-6 py-4">
-                    <span
-                      className={`px-3 py-1 text-xs font-medium rounded-full ${item.statusStyle}`}
-                    >
-                      {item.status}
-                    </span>
-                  </td>
-
-                  {/* Actions */}
-                  <td className="px-6 py-4 text-center">
-                    <div className="inline-flex gap-4 text-gray-400">
-                     <Pencil
-  size={16}
-  className="cursor-pointer hover:text-indigo-600"
-  onClick={() => navigate(`/edit-blog/${item.id}`)}
-/>
-
-                      <Trash2
-                        size={16}
-                        onClick={() => handleDelete(item.id)}
-                        className="cursor-pointer hover:text-red-500"
-                      />
-                    </div>
+              {paginatedBlogs.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="px-6 py-4 text-center text-gray-500">
+                    No blogs found.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                paginatedBlogs.map((item) => (
+                  <tr key={item.id} className="border-b border-[#E5E7EB] last:border-b-0">
+                    {/* Post */}
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-4">
+                       
+                          <img
+                            src={item.cover_image || "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=300"}
+                            alt={item.title}
+                            className="w-12 h-12 rounded-lg object-cover"
+                          />
+                     
+                        <div>
+                          <p className="font-semibold text-gray-900">{item.title}</p>
+                          <p className="text-xs text-gray-500">{item.author || "By Admin"}</p>
+                        </div>
+                      </div>
+                    </td>
+
+                    {/* Date */}
+                    <td className="px-6 py-4 text-gray-700">
+                      {item.created_at ? new Date(item.created_at).toISOString().slice(0, 10) : "-"}
+                    </td>
+
+                    {/* Status */}
+                    <td className="px-6 py-4">
+                      <span
+                        className={`px-3 py-1 text-xs font-medium rounded-full ${
+                          item.status === "Published" ? "bg-[#DCFCE7] text-[#166534]" : "bg-[#FEF9C3] text-[#854D0E]"
+                        }`}
+                      >
+                        {item.status || "Draft"}
+                      </span>
+                    </td>
+
+                    {/* Actions */}
+                    <td className="px-6 py-4 text-center">
+                      <div className="inline-flex gap-4 text-gray-400">
+                        <Pencil
+                          size={16}
+                          className="cursor-pointer hover:text-indigo-600"
+                          onClick={() => navigate(`/edit-blog/${item.id}`, { state: { blog: item } })}
+                        />
+                        <Trash2
+                          size={16}
+                          className="cursor-pointer hover:text-red-500"
+                          onClick={() => handleDelete(item.id)}
+                        />
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
+
+        {/* Pagination */}
         <div className="flex items-center justify-end gap-3 py-4">
-                    <button
-                        onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-                        disabled={currentPage === 1}
-                        className="px-3 py-1 border rounded disabled:opacity-50"
-                    >
-                        Prev
-                    </button>
+          <button
+            onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+            disabled={currentPage === 1}
+            className="px-3 py-1 border rounded disabled:opacity-50"
+          >
+            Prev
+          </button>
 
-                    <span className="text-sm">
-                        Page {currentPage} of {totalPages}
-                    </span>
+          <span className="text-sm">
+            Page {currentPage} of {totalPages}
+          </span>
 
-                    <button
-                        onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
-                        disabled={currentPage === totalPages}
-                        className="px-3 py-1 border rounded disabled:opacity-50"
-                    >
-                        Next
-                    </button>
-                </div>
+          <button
+            onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+            disabled={currentPage === totalPages}
+            className="px-3 py-1 border rounded disabled:opacity-50"
+          >
+            Next
+          </button>
+        </div>
 
       </div>
     </DashboardLayout>

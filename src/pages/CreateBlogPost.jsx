@@ -1,10 +1,16 @@
 import { ArrowLeft, Upload, X } from "lucide-react";
 import DashboardLayout from "../layouts/DashboardLayout";
 import { useRef, useState } from "react";
+import { supabase } from "../config/supabaseClient";
+import { useNavigate } from "react-router-dom";
 
 export default function CreateBlogPost() {
+  const navigate = useNavigate();
   const fileInputRef = useRef(null);
   const [image, setImage] = useState(null);
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -21,13 +27,62 @@ export default function CreateBlogPost() {
     fileInputRef.current.value = "";
   };
 
+  const handlePublish = async () => {
+    if (!title || !content) {
+      alert("Title and content are required!");
+      return;
+    }
+
+    setLoading(true);
+
+    let imageUrl = null;
+
+    // Upload image if selected
+    if (image?.file) {
+      const fileName = `${Date.now()}-${image.file.name}`;
+      const { error: uploadError } = await supabase.storage
+        .from("blog-images")
+        .upload(fileName, image.file);
+
+      if (uploadError) {
+        alert("Image upload failed: " + uploadError.message);
+        setLoading(false);
+        return;
+      }
+
+      const { data } = supabase.storage
+        .from("blog-images")
+        .getPublicUrl(fileName);
+
+      imageUrl = data.publicUrl;
+    }
+
+    // Insert blog post into Supabase
+    const { error } = await supabase.from("blogs").insert([
+      {
+        title,
+        content,
+        cover_image: imageUrl,
+      },
+    ]);
+
+    setLoading(false);
+
+    if (error) {
+      alert("Error creating blog post: " + error.message);
+    } else {
+      alert("Blog post created successfully!");
+      navigate("/blogs");
+    }
+  };
+
   return (
     <DashboardLayout>
       <div className="min-h-screen px-4 py-6">
         <div className="max-w-2xl mx-auto">
 
           {/* Header */}
-          <div className="flex items-center gap-2 mb-6">
+          <div className="flex items-center gap-2 mb-6" onClick={() => navigate("/blogs")}>
             <ArrowLeft className="w-5 h-5 text-gray-600 cursor-pointer" />
             <h1 className="text-lg font-bold text-[#111827]">
               Create Blog Post
@@ -48,6 +103,8 @@ export default function CreateBlogPost() {
               <input
                 type="text"
                 placeholder="Enter blog title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
                 className="w-full px-4 py-2.5 rounded-lg bg-[#F2F2F2] text-sm outline-none placeholder-[#CCCCCC]"
               />
             </div>
@@ -60,6 +117,8 @@ export default function CreateBlogPost() {
               <textarea
                 rows={6}
                 placeholder="Write your blog content here..."
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
                 className="w-full px-4 py-3 rounded-lg bg-[#F2F2F2] text-sm outline-none placeholder-[#CCCCCC] resize-none"
               />
             </div>
@@ -108,9 +167,13 @@ export default function CreateBlogPost() {
 
           {/* Publish Button */}
           <div className="flex justify-end">
-            <button className="flex items-center gap-2 bg-[#5856D6] text-white px-6 py-2.5 rounded-lg text-sm font-medium shadow">
+            <button
+              onClick={handlePublish}
+              disabled={loading}
+              className="flex items-center gap-2 bg-[#5856D6] text-white px-6 py-2.5 rounded-lg text-sm font-medium shadow disabled:opacity-50"
+            >
               <Upload className="w-4 h-4" />
-              Publish Post
+              {loading ? "Publishing..." : "Publish Post"}
             </button>
           </div>
 

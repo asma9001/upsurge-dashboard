@@ -1,6 +1,7 @@
 import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import Dashboard from "./pages/Dashboard";
 import Properties from "./pages/Properties";
 import Messages from "./pages/Messages";
@@ -20,7 +21,9 @@ import AddAgent from "./pages/AddAgent";
 // ..
 const App = () => {
   return (
+    
     <Router>
+    <ToastContainer position="top-right" autoClose={2000} />
       <Routes>
         {/* Public Route */}
         <Route path="/login" element={<Login />} />

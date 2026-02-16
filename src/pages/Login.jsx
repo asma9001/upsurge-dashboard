@@ -1,19 +1,37 @@
-import React from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "../config/supabaseClient";
 
 const Login = () => {
-    const navigate = useNavigate();
+  const navigate = useNavigate();
+  const [email, setEmail] = useState("admin@realestate.com");
+  const [password, setPassword] = useState("password");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-    const handleSubmit = (e) => {
-  e.preventDefault();
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
 
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
-  localStorage.setItem("auth", "true");
+    if (error) {
+      setError(error.message);
+      setLoading(false);
+      return;
+    }
 
-  navigate("/");
-};
+    // Store session
+    localStorage.setItem("auth", "true");
 
-  return (
+    navigate("/");
+  };
+
+return (
     <div className="min-h-screen flex items-center justify-center px-4 bg-gray-50">
       <div className="w-full max-w-md bg-white rounded-xl shadow-md p-5 sm:p-6 border border-[#FBFBFB]">
 
@@ -38,15 +56,13 @@ const Login = () => {
             <label className="text-sm font-medium text-[#374151]">
               Email Address
             </label>
-            <input
+          <input
               type="email"
               placeholder="Enter Email"
-              className="mt-1 w-full px-4 py-2 rounded-md 
-                         bg-[#F2F2F2] 
-                         border border-transparent 
-                         placeholder:text-[#ABABAB] 
-                         placeholder:text-sm
-                         focus:outline-none focus:ring-2 focus:ring-[#5856D6]"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="mt-1 w-full px-4 py-2 rounded-md bg-gray-100 focus:ring-2 focus:ring-indigo-500"
+              required
             />
           </div>
 
@@ -54,23 +70,26 @@ const Login = () => {
             <label className="text-sm font-medium text-[#374151]">
               Enter Password
             </label>
-            <input
+             <input
               type="password"
               placeholder="********"
-              className="mt-1 w-full px-4 py-2 rounded-md 
-                         bg-[#F2F2F2] 
-                         border border-transparent 
-                         placeholder:text-[#ABABAB] 
-                         placeholder:text-sm
-                         focus:outline-none focus:ring-2 focus:ring-[#5856D6]"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="mt-1 w-full px-4 py-2 rounded-md bg-gray-100 focus:ring-2 focus:ring-indigo-500"
+              required
             />
           </div>
 
+         {error && (
+            <p className="text-red-500 text-sm">{error}</p>
+          )}
+
           <button
             type="submit"
-            className="w-full mt-2 py-2.5 rounded-md bg-[#5856D6] text-white font-medium hover:opacity-90 transition"
+            disabled={loading}
+            className="w-full py-2.5 rounded-md bg-indigo-600 text-white"
           >
-            Sign In
+            {loading ? "Signing In..." : "Sign In"}
           </button>
         </form>
 

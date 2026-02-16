@@ -1,57 +1,72 @@
-"use client";
-
 import { Pencil, Trash2, Plus } from "lucide-react";
 import DashboardLayout from "../layouts/DashboardLayout";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-
-const initialProperties = [
-    {
-        id: 1,
-        title: "Modern Waterfront Villa",
-        type: "House",
-        location: "Miami, FL",
-        price: "$2,500,000",
-        status: "Active",
-        statusStyle: "bg-green-100 text-green-700",
-        date: "15/10/2023",
-        image: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=100",
-    },
-    {
-        id: 2,
-        title: "Downtown Luxury Penthouse",
-        type: "Apartment",
-        location: "New York, NY",
-        price: "$1,200,000",
-        status: "Active",
-        statusStyle: "bg-green-100 text-green-700",
-        date: "18/10/2023",
-        image: "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=100",
-    },
-    {
-        id: 3,
-        title: "Cozy Mountain Cabin",
-        type: "House",
-        location: "Aspen, CO",
-        price: "$450,000",
-        status: "Sold",
-        statusStyle: "bg-gray-100 text-gray-600",
-        date: "05/09/2023",
-        image: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=100",
-    },
-];
-
+import { supabase } from "../config/supabaseClient";
+// const initialProperties = [
+//     {
+//         id: 1,
+//         title: "Modern Waterfront Villa",
+//         type: "House",
+//         location: "Miami, FL",
+//         price: "$2,500,000",
+//         status: "Active",
+//         statusStyle: "bg-green-100 text-green-700",
+//         date: "15/10/2023",
+//         image: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=100",
+//     },
+//     {
+//         id: 2,
+//         title: "Downtown Luxury Penthouse",
+//         type: "Apartment",
+//         location: "New York, NY",
+//         price: "$1,200,000",
+//         status: "Active",
+//         statusStyle: "bg-green-100 text-green-700",
+//         date: "18/10/2023",
+//         image: "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=100",
+//     },
+//     {
+//         id: 3,
+//         title: "Cozy Mountain Cabin",
+//         type: "House",
+//         location: "Aspen, CO",
+//         price: "$450,000",
+//         status: "Sold",
+//         statusStyle: "bg-gray-100 text-gray-600",
+//         date: "05/09/2023",
+//         image: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=100",
+//     },
+// ];
 export default function Properties() {
-    const [properties, setProperties] = useState(initialProperties);
+    const [properties, setProperties] = useState([]);
     const [search, setSearch] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
     const rowsPerPage = 5;
 
     const navigate = useNavigate();
 
+    // Fetch properties from Supabase
+    useEffect(() => {
+        const fetchProperties = async () => {
+            const { data, error } = await supabase
+                .from("properties")
+                .select("*")
+                .order("id", { ascending: false }); // newest first
+
+            if (error) {
+                console.error("Error fetching properties:", error.message);
+            } else {
+                setProperties(data);
+            }
+        };
+
+        fetchProperties();
+    }, []);
+
     // Filtered and paginated properties
     const filteredProperties = properties.filter((item) =>
-        `${item.title} ${item.location} ${item.type}`
+        `${item.title} ${item.location} ${item.type || ""}`
             .toLowerCase()
             .includes(search.toLowerCase())
     );
@@ -63,9 +78,15 @@ export default function Properties() {
         currentPage * rowsPerPage
     );
 
- 
-    const handleDelete = (id) => {
-        if (window.confirm("Are you sure you want to delete this property?")) {
+    // Delete property
+    const handleDelete = async (id) => {
+        if (!window.confirm("Are you sure you want to delete this property?")) return;
+
+        const { error } = await supabase.from("properties").delete().eq("id", id);
+
+        if (error) {
+            alert(error.message);
+        } else {
             setProperties((prev) => prev.filter((prop) => prop.id !== id));
         }
     };
@@ -111,52 +132,62 @@ export default function Properties() {
                         </thead>
 
                         <tbody className="divide-y divide-gray-200">
-                            {paginatedProperties.map((item) => (
-                                <tr key={item.id} className="hover:bg-gray-50 transition">
-                                    <td className="px-6 py-4">
-                                        <div className="flex items-center gap-4">
-                                            <img
-                                                src={item.image}
-                                                alt={item.title}
-                                                className="w-12 h-12 rounded-lg object-cover"
-                                            />
-                                            <div>
-                                                <p className="font-semibold text-gray-900">{item.title}</p>
-                                                <p className="text-xs text-gray-500">{item.type}</p>
+                            {paginatedProperties.length > 0 ? (
+                                paginatedProperties.map((item) => (
+                                    <tr key={item.id} className="hover:bg-gray-50 transition">
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center gap-4">
+                                                <img
+                                                    src={item.images?.[0] || "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=100"}
+                                                    alt={item.title}
+                                                    className="w-12 h-12 rounded-lg object-cover"
+                                                />
+                                                <div>
+                                                    <p className="font-semibold text-gray-900">{item.title}</p>
+                                                    <p className="text-xs text-gray-500">{item.category}</p>
+                                                </div>
                                             </div>
-                                        </div>
-                                    </td>
-
-                                    <td className="px-6 py-4">{item.location}</td>
-                                    <td className="px-6 py-4 font-medium">{item.price}</td>
-
-                                    <td className="px-6 py-4">
-                                        <span
-                                            className={`px-3 py-1 text-xs rounded-full font-medium ${item.statusStyle}`}
-                                        >
-                                            {item.status}
-                                        </span>
-                                    </td>
-
-                                    <td className="px-6 py-4 text-gray-600">{item.date}</td>
-
-                                    <td className="px-6 py-4 text-right">
-                                        <div className="inline-flex gap-3 text-gray-400">
-                                            <Pencil
-                                                className="w-4 h-4 cursor-pointer hover:text-indigo-600"
-                                                onClick={() =>
-                                                    navigate(`/edit-property/${item.id}`, { state: { property: item } })
-                                                }
-                                            />
-                                            <Trash2
-                                                className="w-4 h-4 cursor-pointer hover:text-red-500"
-                                                onClick={() => handleDelete(item.id)}
-                                            />
-                                        </div>
+                                        </td>
+                                        <td className="px-6 py-4">{item.city}</td>
+                                        <td className="px-6 py-4 font-medium">{item.price}</td>
+                                        <td className="px-6 py-4">
+                                            <span
+                                                className={`px-3 py-1 text-xs rounded-full font-medium ${item.status === "Active"
+                                                        ? "bg-green-100 text-green-700"
+                                                        : "bg-gray-100 text-gray-600"
+                                                    }`}
+                                            >
+                                                {item.status}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 text-gray-600">
+                                            {item.created_at ? new Date(item.created_at).toISOString().slice(0, 10) : "-"}
+                                        </td>
+                                        <td className="px-6 py-4 text-right">
+                                            <div className="inline-flex gap-3 text-gray-400">
+                                                <Pencil
+                                                    className="w-4 h-4 cursor-pointer hover:text-indigo-600"
+                                                    onClick={() =>
+                                                        navigate(`/edit-property/${item.id}`, { state: { property: item } })
+                                                    }
+                                                />
+                                                <Trash2
+                                                    className="w-4 h-4 cursor-pointer hover:text-red-500"
+                                                    onClick={() => handleDelete(item.id)}
+                                                />
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))
+                            ) : (
+                                <tr>
+                                    <td colSpan={6} className="text-center py-6 text-gray-500">
+                                        No properties found
                                     </td>
                                 </tr>
-                            ))}
+                            )}
                         </tbody>
+
                     </table>
                 </div>
 
